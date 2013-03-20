@@ -100,4 +100,18 @@ function listDir(directoryId, localPath, isChildDir) {
   });
 }
 
-listDir(directoryId, localPath, false);
+var lockFile = '/tmp/putiosync-' + directoryId + '.lock';
+
+if (fs.existsSync(lockFile)) {
+  console.log('Process already running. If it is not the delete ' + lockFile);
+} else {
+  process.on('exit', function() {
+    fs.unlinkSync(lockFile);
+  });
+  fs.open(lockFile, 'w', 0666, function(err, fd) {
+    fs.closeSync(fd);
+  });
+  listDir(directoryId, localPath, false);
+
+}
+

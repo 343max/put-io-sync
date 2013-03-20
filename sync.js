@@ -4,6 +4,7 @@ var _ = require('underscore');
 var fs = require('fs');
 
 var api = new PutIO('CI0698O7');
+var aria2cPath = 'aria2c';
 
 var args = argv.option([{
   name: 'directory-id',
@@ -27,13 +28,24 @@ console.dir(directoryId);
 function listDir(directoryId, localPath) {
   console.log(localPath);
 
-  fs.mkdir(localPath, 0766, function() {
-    api.files.list(directoryId, function(data) {
-      _.each(data.files, function(node) {
-        console.dir(node);
+  fs.mkdir(localPath, 0766, function dirCreated() {
+    api.files.list(directoryId, function gotPutIoListing(data) {
+      _.each(data.files, function eachFile(fileNode) {
+        var localFilePath = localPath + '/' + fileNode.name;
 
-        if (node.content_type == 'application/x-directory') {
-          listDir(node.id, localPath + '/' + node.name);
+//        console.dir(fileNode);
+
+        if (fileNode.content_type == 'application/x-directory') {
+          listDir(fileNode.id, localFilePath);
+        } else {
+          fs.stat(localFilePath, function gotFileStat(err, stat) {
+            console.dir([err, stat]);
+            console.dir(fileNode);
+            console.dir(api.files.download(fileNode.id));
+
+            var shellCommand = aria2cPath + ' --dir="' + localPath + '" ' + api.files.download(fileNode.id);
+            console.log(shellCommand);
+          });
         }
       });
     });

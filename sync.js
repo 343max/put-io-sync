@@ -3,8 +3,9 @@ var argv = require( 'argv' );
 var _ = require('underscore');
 var fs = require('fs');
 var execSync = require('execSync');
-var config = require('./config');
 var Pushover = require('node-pushover');
+var TVShowMatcher = require('./tvshowdir');
+var config = require('./config');
 
 var push = null;
 if (config.pushpin.enabled) {
@@ -29,11 +30,23 @@ var args = argv.option([{
   name: 'local-path',
   short: 'l',
   type: 'path',
-  description: 'local filepath to sync to'
+  description: 'local dir to sync to'
+}, {
+  name: 'tvshow-dir',
+  short: 's',
+  type: 'path',
+  description: '(optional) local filepath of your TV show dir'
 }]).run();
 
 var directoryId = args.options['directory-id'] || 0;
 var localPath = args.options['local-path'];
+var tvShowDir = args.options['tvshow-dir'];
+var matcher = null;
+if (tvShowDir) {
+  matcher = TVShowMatcher(tvShowDir);
+} else {
+  matcher = function() {};
+}
 
 function listDir(directoryId, localPath, callback) {
   fs.mkdir(localPath, 0766, function dirCreated() {
@@ -44,17 +57,27 @@ function listDir(directoryId, localPath, callback) {
         if (fileNode.content_type == 'application/x-directory') {
           listDir(fileNode.id, localFilePath);
         } else {
+          var fileDir = localPath;
+          var tvshow = matcher(fileNode.name);
+
+          if (tvshow) fileDir = tvshow.path;
+
+          var finalPath = fileDir + '/' + fileNode.name;
+
           fs.stat(localFilePath, function gotFileStat(err, stat) {
             if (stat) return;
+            var shellCommand = config.ariaPath + ' -d "' + fileDir + '" "' + api.files.download(fileNode.id) + '"';
 
-            var shellCommand = config.ariaPath + ' -d "' + localPath + '" "' + api.files.download(fileNode.id) + '"';
-
-            console.log('downloading ' + localPath + '...');
+            console.log('downloading ' + localFilePath + '...');
             console.log(shellCommand);
             var result = execSync.stdout(shellCommand);
 
             if (fileNode.size > 20 * 1024 * 1024) {
-              push.send('put.io sync', 'Downloaded ' + fileNode.name);
+              if (tvshow) {
+                push.send('put.io sync', 'downloaded an episode of ' + tvshow.name);
+              } else {
+                push.send('put.io sync', 'Downloaded ' + fileNode.name);
+              }
             }
           });
         }

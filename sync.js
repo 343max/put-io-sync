@@ -3,13 +3,11 @@ var argv = require( 'argv' );
 var _ = require('underscore');
 var fs = require('fs');
 var execSync = require('execSync');
-var queue = require('queue-async');
+var config = require('./config');
 
-var q = queue(1);
+console.dir(config);
 
-
-var api = new PutIO('CI0698O7');
-var aria2cPath = 'aria2c';
+var api = new PutIO(config.putIo.oauth2key);
 
 var args = argv.option([{
   name: 'directory-id',
@@ -38,8 +36,9 @@ function listDir(directoryId, localPath, callback) {
           fs.stat(localFilePath, function gotFileStat(err, stat) {
             if (stat) return;
 
-            var shellCommand = aria2cPath + ' -d "' + localPath + '" "' + api.files.download(fileNode.id) + '"';
+            var shellCommand = config.ariaPath + ' -d "' + localPath + '" "' + api.files.download(fileNode.id) + '"';
 
+            console.log('downloading ' + localPath + '...');
             console.log(shellCommand);
             var result = execSync.stdout(shellCommand);
           });

@@ -3,7 +3,6 @@
     "put.io-v2": "*",
     "argv": "*",
     "underscore": "*",
-    "execSync": "*",
-    "queue-async": "*"
+    "execSync": "*"
   }
 }

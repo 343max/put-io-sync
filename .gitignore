@@ -1,3 +1,4 @@
 .idea/put-io-sync.iml
 .idea/scopes/scope_settings.xml
 node_modules/
+config.js

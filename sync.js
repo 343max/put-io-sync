@@ -48,47 +48,54 @@ if (tvShowDir) {
   matcher = function() {};
 }
 
-function listDir(directoryId, localPath, callback) {
-  fs.mkdir(localPath, 0766, function dirCreated() {
-    api.files.list(directoryId, function gotPutIoListing(data) {
-      _.each(data.files, function eachFile(fileNode) {
-        var localFilePath = localPath + '/' + fileNode.name;
+function listDir(directoryId, localPath, isChildDir) {
+  api.files.list(directoryId, function gotPutIoListing(data) {
+    if (data.files.length == 0) {
+      if (isChildDir) {
+        console.log('deleting empty directory');
+        api.files.delete(directoryId);
+      }
+    } else {
+      fs.mkdir(localPath, 0766, function dirCreated() {
+        _.each(data.files, function eachFile(fileNode) {
+          var localFilePath = localPath + '/' + fileNode.name;
 
-        if (fileNode.content_type == 'application/x-directory') {
-          listDir(fileNode.id, localFilePath);
-        } else {
-          var fileDir = localPath;
-          var tvshow = matcher(fileNode.name);
+          if (fileNode.content_type == 'application/x-directory') {
+            listDir(fileNode.id, localFilePath, true);
+          } else {
+            var fileDir = localPath;
+            var tvshow = matcher(fileNode.name);
 
-          if (tvshow) fileDir = tvshow.path;
+            if (tvshow) fileDir = tvshow.path;
 
-          var finalPath = fileDir + '/' + fileNode.name;
+            var finalPath = fileDir + '/' + fileNode.name;
 
-          fs.stat(localFilePath, function gotFileStat(err, stat) {
-            if (stat) {
-              // this file was allready downloaded - so we might delete it
-              console.log('deleting ' + fileNode.name);
-              api.files.delete(fileNode.id);
-              return;
-            };
-            var shellCommand = config.ariaPath + ' -d "' + fileDir + '" "' + api.files.download(fileNode.id) + '"';
+            fs.stat(localFilePath, function gotFileStat(err, stat) {
+              if (stat && stat.size == fileNode.size) {
+                // this file was allready downloaded - so we might delete it
+                console.log('deleting ' + fileNode.name);
+                api.files.delete(fileNode.id);
+                return;
+              };
+              var shellCommand = config.ariaPath + ' -d "' + fileDir + '" "' + api.files.download(fileNode.id) + '"';
 
-            console.log('downloading ' + localFilePath + '...');
-            console.log(shellCommand);
-            var result = execSync.stdout(shellCommand);
+              console.log('downloading ' + localFilePath + '...');
+              console.log(shellCommand);
+              var result = execSync.stdout(shellCommand);
 
-            if (fileNode.size > 20 * 1024 * 1024) {
-              if (tvshow) {
-                push.send('put.io sync', 'downloaded an episode of ' + tvshow.name);
-              } else {
-                push.send('put.io sync', 'Downloaded ' + fileNode.name);
+              if (fileNode.size > 20 * 1024 * 1024) {
+                if (tvshow) {
+                  push.send('put.io sync', 'downloaded an episode of ' + tvshow.name);
+                } else {
+                  push.send('put.io sync', 'Downloaded ' + fileNode.name);
+                }
               }
-            }
-          });
-        }
+            });
+          }
+        });
       });
-    });
+    }
   });
 }
 
-listDir(directoryId, localPath);
+listDir(directoryId, localPath, false);

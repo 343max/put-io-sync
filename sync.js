@@ -65,7 +65,12 @@ function listDir(directoryId, localPath, callback) {
           var finalPath = fileDir + '/' + fileNode.name;
 
           fs.stat(localFilePath, function gotFileStat(err, stat) {
-            if (stat) return;
+            if (stat) {
+              // this file was allready downloaded - so we might delete it
+              console.log('deleting ' + fileNode.name);
+              api.files.delete(fileNode.id);
+              return;
+            };
             var shellCommand = config.ariaPath + ' -d "' + fileDir + '" "' + api.files.download(fileNode.id) + '"';
 
             console.log('downloading ' + localFilePath + '...');

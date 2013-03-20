@@ -2,6 +2,8 @@
   "dependencies": {
     "put.io-v2": "*",
     "argv": "*",
-    "underscore": "*"
+    "underscore": "*",
+    "execSync": "*",
+    "queue-async": "*"
   }
 }

@@ -2,6 +2,11 @@ var PutIO = require('put.io-v2');
 var argv = require( 'argv' );
 var _ = require('underscore');
 var fs = require('fs');
+var execSync = require('execSync');
+var queue = require('queue-async');
+
+var q = queue(1);
+
 
 var api = new PutIO('CI0698O7');
 var aria2cPath = 'aria2c';
@@ -39,12 +44,16 @@ function listDir(directoryId, localPath) {
           listDir(fileNode.id, localFilePath);
         } else {
           fs.stat(localFilePath, function gotFileStat(err, stat) {
-            console.dir([err, stat]);
-            console.dir(fileNode);
-            console.dir(api.files.download(fileNode.id));
+            if (stat) return;
 
-            var shellCommand = aria2cPath + ' --dir="' + localPath + '" ' + api.files.download(fileNode.id);
+            var shellCommand = aria2cPath + ' -d "' + localPath + '" "' + api.files.download(fileNode.id) + '"';
             console.log(shellCommand);
+
+            q.defer(function() {
+              console.log('Starting download of ' + localFilePath);
+              var result = execSync.stdout(shellCommand);
+              console.log('Finished download of ' + localFilePath);
+            });
           });
         }
       });
@@ -53,3 +62,6 @@ function listDir(directoryId, localPath) {
 }
 
 listDir(directoryId, localPath);
+q.awaitAll(function(error, results) {
+  console.log('done!');
+})

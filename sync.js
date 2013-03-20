@@ -53,7 +53,8 @@ function listDir(directoryId, localPath, isChildDir) {
     if (data.files.length == 0) {
       if (isChildDir) {
         console.log('deleting empty directory');
-        api.files.delete(directoryId);
+        console.log('deleting seems to be broken so we don\'t do it');
+//        api.files.delete(directoryId);
       }
     } else {
       fs.mkdir(localPath, 0766, function dirCreated() {
@@ -74,7 +75,8 @@ function listDir(directoryId, localPath, isChildDir) {
               if (stat && stat.size == fileNode.size) {
                 // this file was allready downloaded - so we might delete it
                 console.log('deleting ' + fileNode.name);
-                api.files.delete(fileNode.id);
+                console.log('deleting seems to be broken so we don\'t do it');
+//                api.files.delete(fileNode.id);
                 return;
               };
               var shellCommand = config.ariaPath + ' -d "' + fileDir + '" "' + api.files.download(fileNode.id) + '"';

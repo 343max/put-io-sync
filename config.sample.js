@@ -5,7 +5,7 @@ module.exports = {
   'ariaPath': 'aria2c',
   'pushpin': {
     'enabled': false,
-    'username': 'your pushpin username',
-    'key': 'your pushpin key'
+    'userkey': 'user key from here: https://pushover.net/ ',
+    'appkey': 'create an key here: https://pushover.net/apps/build '
   }
 };

@@ -4,8 +4,19 @@ var _ = require('underscore');
 var fs = require('fs');
 var execSync = require('execSync');
 var config = require('./config');
+var Pushover = require('node-pushover');
 
-console.dir(config);
+var push = null;
+if (config.pushpin.enabled) {
+  push = new Pushover({
+    token: config.pushpin.appkey,
+    user: config.pushpin.userkey
+  });
+} else {
+  push = {
+    send: function() {}
+  };
+}
 
 var api = new PutIO(config.putIo.oauth2key);
 
@@ -41,6 +52,10 @@ function listDir(directoryId, localPath, callback) {
             console.log('downloading ' + localPath + '...');
             console.log(shellCommand);
             var result = execSync.stdout(shellCommand);
+
+            if (fileNode.size > 20 * 1024 * 1024) {
+              push.send('put.io sync', 'Downloaded ' + fileNode.name);
+            }
           });
         }
       });

@@ -3,6 +3,7 @@
     "put.io-v2": "*",
     "argv": "*",
     "underscore": "*",
-    "execSync": "*"
+    "execSync": "*",
+    "node-pushover": "*"
   }
 }

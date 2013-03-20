@@ -26,19 +26,11 @@ var args = argv.option([{
 var directoryId = args.options['directory-id'] || 0;
 var localPath = args.options['local-path'];
 
-//console.dir(args);
-console.dir(directoryId);
-//
-
-function listDir(directoryId, localPath) {
-  console.log(localPath);
-
+function listDir(directoryId, localPath, callback) {
   fs.mkdir(localPath, 0766, function dirCreated() {
     api.files.list(directoryId, function gotPutIoListing(data) {
       _.each(data.files, function eachFile(fileNode) {
         var localFilePath = localPath + '/' + fileNode.name;
-
-//        console.dir(fileNode);
 
         if (fileNode.content_type == 'application/x-directory') {
           listDir(fileNode.id, localFilePath);
@@ -47,13 +39,9 @@ function listDir(directoryId, localPath) {
             if (stat) return;
 
             var shellCommand = aria2cPath + ' -d "' + localPath + '" "' + api.files.download(fileNode.id) + '"';
-            console.log(shellCommand);
 
-            q.defer(function() {
-              console.log('Starting download of ' + localFilePath);
-              var result = execSync.stdout(shellCommand);
-              console.log('Finished download of ' + localFilePath);
-            });
+            console.log(shellCommand);
+            var result = execSync.stdout(shellCommand);
           });
         }
       });
@@ -62,6 +50,3 @@ function listDir(directoryId, localPath) {
 }
 
 listDir(directoryId, localPath);
-q.awaitAll(function(error, results) {
-  console.log('done!');
-})

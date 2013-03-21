@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "put.io-v2": "*",
+    "put.io-v2": "git://github.com/343max/put.io.js-v2.git",
     "argv": "*",
     "underscore": "*",
     "execSync": "*",

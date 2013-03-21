@@ -52,7 +52,7 @@ function listDir(directoryId, localPath, isChildDir) {
   api.files.list(directoryId, function gotPutIoListing(data) {
     if (data.files.length == 0) {
       if (isChildDir) {
-        console.log('deleting empty directory');
+        console.log('deleting empty directory from put.io');
         api.files.delete(directoryId);
       }
     } else {
@@ -70,10 +70,10 @@ function listDir(directoryId, localPath, isChildDir) {
 
             var finalPath = fileDir + '/' + fileNode.name;
 
-            fs.stat(localFilePath, function gotFileStat(err, stat) {
+            fs.stat(finalPath, function gotFileStat(err, stat) {
               if (stat && stat.size == fileNode.size) {
                 // this file was allready downloaded - so we might delete it
-                console.log('deleting ' + fileNode.name);
+                console.log('deleting ' + fileNode.name + ' from put.io');
                 api.files.delete(fileNode.id);
                 return;
               };

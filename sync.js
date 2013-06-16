@@ -48,6 +48,17 @@ if (tvShowDir) {
   matcher = function() {};
 }
 
+function deleteShowIfCompleted(api, fileNode, stat) {
+  if (stat && stat.size == fileNode.size) {
+    // this file was allready downloaded - so we might delete it
+    console.log('deleting ' + fileNode.name + ' from put.io');
+    api.files.delete(fileNode.id);
+    return true;
+  };
+
+  return false;
+}
+
 function listDir(directoryId, localPath, isChildDir) {
   api.files.list(directoryId, function gotPutIoListing(data) {
     if (data.files.length == 0) {
@@ -71,17 +82,18 @@ function listDir(directoryId, localPath, isChildDir) {
             var finalPath = fileDir + '/' + fileNode.name;
 
             fs.stat(finalPath, function gotFileStat(err, stat) {
-              if (stat && stat.size == fileNode.size) {
-                // this file was allready downloaded - so we might delete it
-                console.log('deleting ' + fileNode.name + ' from put.io');
-                api.files.delete(fileNode.id);
+              if (deleteShowIfCompleted(api, fileNode, stat)) {
                 return;
-              };
+              }
+
               var shellCommand = config.ariaPath + ' -d "' + fileDir + '" "' + api.files.download(fileNode.id) + '"';
 
               console.log('downloading ' + localFilePath + '...');
               console.log(shellCommand);
               var result = execSync.stdout(shellCommand);
+
+              var afterStat =fs.statSync(finalPath);
+              deleteShowIfCompleted(api, fileNode, afterStat);
 
               if (fileNode.size > 20 * 1024 * 1024) {
                 if (tvshow) {

@@ -2,10 +2,11 @@ var PutIO = require('put.io-v2');
 var argv = require( 'argv' );
 var _ = require('underscore');
 var fs = require('fs');
-var execSync = require('execSync');
 var Pushover = require('node-pushover');
 var TVShowMatcher = require('./tvshowdir');
 var config = require('./config');
+var spawn = require('child_process').spawn;
+
 
 var push = null;
 if (config.pushpin.enabled) {
@@ -48,6 +49,46 @@ if (tvShowDir) {
   matcher = function() {};
 }
 
+function downloadFiles(files) {
+  var file_nodes = files;
+  var file = file_nodes.pop();
+
+  var fileDir = localPath;
+  var tvshow = matcher(file.name);
+
+  if (tvshow) fileDir = tvshow.path;
+
+  var finalPath = fileDir + '/' + file.name;
+
+  fs.stat(finalPath, function gotFileStat(err, stat) {
+            if (stat && stat.size == file.size) {
+              // this file was allready downloaded - so we might delete it
+              console.log('deleting ' + file.name + ' from put.io');
+              api.files.delete(file.id);
+              if (file_nodes > 0) {
+                downloadFiles(file_nodes);
+              }
+            };
+            var shellCommand = config.ariaPath + ' --file-allocation=none --continue=true -d "' + fileDir + '" "' + api.files.download(file.id) + '"';
+            var localFilePath = localPath + '/' + file.name;
+            console.log('downloading ' + localFilePath + '...');
+            console.log(shellCommand);
+            var obj = spawn('bash', ['-c', shellCommand], { stdio: 'inherit' });
+
+            obj.on('exit',function(code,signal) {
+              downloadFiles(file_nodes);
+              if (file.size > 20 * 1024 * 1024) {
+                if (tvshow) {
+                  push.send('put.io sync', 'downloaded an episode of ' + tvshow.name);
+                } else {
+                  push.send('put.io sync', 'Downloaded ' + file.name);
+                }
+              }
+            });
+  });
+
+}
+
 function listDir(directoryId, localPath, isChildDir) {
   api.files.list(directoryId, function gotPutIoListing(data) {
     if (data.files.length == 0) {
@@ -57,42 +98,15 @@ function listDir(directoryId, localPath, isChildDir) {
       }
     } else {
       fs.mkdir(localPath, 0766, function dirCreated() {
+        var files = [];
         _.each(data.files, function eachFile(fileNode) {
-          var localFilePath = localPath + '/' + fileNode.name;
-
           if (fileNode.content_type == 'application/x-directory') {
             listDir(fileNode.id, localFilePath, true);
           } else {
-            var fileDir = localPath;
-            var tvshow = matcher(fileNode.name);
-
-            if (tvshow) fileDir = tvshow.path;
-
-            var finalPath = fileDir + '/' + fileNode.name;
-
-            fs.stat(finalPath, function gotFileStat(err, stat) {
-              if (stat && stat.size == fileNode.size) {
-                // this file was allready downloaded - so we might delete it
-                console.log('deleting ' + fileNode.name + ' from put.io');
-                api.files.delete(fileNode.id);
-                return;
-              };
-              var shellCommand = config.ariaPath + ' -d "' + fileDir + '" "' + api.files.download(fileNode.id) + '"';
-
-              console.log('downloading ' + localFilePath + '...');
-              console.log(shellCommand);
-              var result = execSync.stdout(shellCommand);
-
-              if (fileNode.size > 20 * 1024 * 1024) {
-                if (tvshow) {
-                  push.send('put.io sync', 'downloaded an episode of ' + tvshow.name);
-                } else {
-                  push.send('put.io sync', 'Downloaded ' + fileNode.name);
-                }
-              }
-            });
+            files.push(fileNode);
           }
         });
+        downloadFiles(files);
       });
     }
   });
@@ -112,4 +126,3 @@ if (fs.existsSync(lockFile)) {
   listDir(directoryId, localPath, false);
 
 }
-

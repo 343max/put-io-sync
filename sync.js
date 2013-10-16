@@ -76,6 +76,8 @@ function downloadFiles(files) {
             var obj = spawn('bash', ['-c', shellCommand], { stdio: 'inherit' });
 
             obj.on('exit',function(code,signal) {
+              var afterStat = fs.statSync(finalPath);
+              deleteShowIfCompleted(api, file, afterStat);
               downloadFiles(file_nodes);
               if (file.size > 20 * 1024 * 1024) {
                 if (tvshow) {
@@ -86,8 +88,18 @@ function downloadFiles(files) {
               }
             });
   });
-
 }
+
+function deleteShowIfCompleted(api, fileNode, stat) {
+  if (stat && stat.size == fileNode.size) {
+    // this file was allready downloaded - so we might delete it
+    console.log('deleting ' + fileNode.name + ' from put.io');
+    api.files.delete(fileNode.id);
+    return true;
+  };
+
+  return false;
+}  
 
 function listDir(directoryId, localPath, isChildDir) {
   api.files.list(directoryId, function gotPutIoListing(data) {

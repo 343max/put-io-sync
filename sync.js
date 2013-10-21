@@ -52,42 +52,43 @@ if (tvShowDir) {
 function downloadFiles(files) {
   var file_nodes = files;
   var file = file_nodes.pop();
+  if (file) {
+    var fileDir = localPath;
+    var tvshow = matcher(file.name);
 
-  var fileDir = localPath;
-  var tvshow = matcher(file.name);
+    if (tvshow) fileDir = tvshow.path;
 
-  if (tvshow) fileDir = tvshow.path;
+    var finalPath = fileDir + '/' + file.name;
 
-  var finalPath = fileDir + '/' + file.name;
-
-  fs.stat(finalPath, function gotFileStat(err, stat) {
-            if (stat && stat.size == file.size) {
-              // this file was allready downloaded - so we might delete it
-              console.log('deleting ' + file.name + ' from put.io');
-              api.files.delete(file.id);
-              if (file_nodes > 0) {
-                downloadFiles(file_nodes);
-              }
-            };
-            var shellCommand = config.ariaPath + ' --file-allocation=none --continue=true -d "' + fileDir + '" "' + api.files.download(file.id) + '"';
-            var localFilePath = localPath + '/' + file.name;
-            console.log('downloading ' + localFilePath + '...');
-            console.log(shellCommand);
-            var obj = spawn('bash', ['-c', shellCommand], { stdio: 'inherit' });
-
-            obj.on('exit',function(code,signal) {
-              var afterStat = fs.statSync(finalPath);
-              deleteShowIfCompleted(api, file, afterStat);
-              downloadFiles(file_nodes);
-              if (file.size > 20 * 1024 * 1024) {
-                if (tvshow) {
-                  push.send('put.io sync', 'downloaded an episode of ' + tvshow.name);
-                } else {
-                  push.send('put.io sync', 'Downloaded ' + file.name);
+    fs.stat(finalPath, function gotFileStat(err, stat) {
+              if (stat && stat.size == file.size) {
+                // this file was allready downloaded - so we might delete it
+                console.log('deleting ' + file.name + ' from put.io');
+                api.files.delete(file.id);
+                if (file_nodes > 0) {
+                  downloadFiles(file_nodes);
                 }
-              }
+              };
+              var shellCommand = config.ariaPath + ' --file-allocation=none --continue=true -d "' + fileDir + '" "' + api.files.download(file.id) + '"';
+              var localFilePath = localPath + '/' + file.name;
+              console.log('downloading ' + localFilePath + '...');
+              console.log(shellCommand);
+              var obj = spawn('bash', ['-c', shellCommand], { stdio: 'inherit' });
+
+              obj.on('exit',function(code,signal) {
+                       var afterStat = fs.statSync(finalPath);
+                       deleteShowIfCompleted(api, file, afterStat);
+                       downloadFiles(file_nodes);
+                       if (file.size > 20 * 1024 * 1024) {
+                         if (tvshow) {
+                           push.send('put.io sync', 'downloaded an episode of ' + tvshow.name);
+                         } else {
+                           push.send('put.io sync', 'Downloaded ' + file.name);
+                         }
+                       }
+                     });
             });
-  });
+  }
 }
 
 function deleteShowIfCompleted(api, fileNode, stat) {
@@ -99,7 +100,7 @@ function deleteShowIfCompleted(api, fileNode, stat) {
   };
 
   return false;
-}  
+}
 
 function listDir(directoryId, localPath, isChildDir) {
   api.files.list(directoryId, function gotPutIoListing(data) {

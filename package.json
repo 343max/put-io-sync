@@ -4,6 +4,7 @@
     "argv": "*",
     "underscore": "*",
     "execSync": "*",
-    "node-pushover": "*"
+    "node-pushover": "*",
+    "xmlhttprequest": "*"
   }
 }

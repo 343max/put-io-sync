@@ -4,6 +4,9 @@ var _ = require('underscore');
 var fs = require('fs');
 var execSync = require('execSync');
 var Pushover = require('node-pushover');
+if (!XMLHttpRequest) {
+  var XMLHttpRequest = require('xmlhttprequest').XMLHttpRequest;
+}
 var TVShowMatcher = require('./tvshowdir');
 var config = require('./config');
 
@@ -59,6 +62,31 @@ function deleteShowIfCompleted(api, fileNode, stat) {
   return false;
 }
 
+function sendRPCRequest(host, methodName, params) {
+  if (!params) params = [];
+
+  var req = new XMLHttpRequest();
+  req.open('POST', 'http://' + host + '/jsonrpc');
+  req.setRequestHeader("Content-Type","application/json");
+  req.onload = function(e) {
+    if (req.status != 200) {
+      console.dir(req);
+    } else {
+      var o = JSON.parse(req.responseText);
+
+      if (o.error) {
+        console.dir({method: methodName, params: params, error: o.error});
+      }
+    }
+  }
+  req.send(JSON.stringify({
+    "jsonrpc":"2.0",
+    "method":methodName,
+    "params": params,
+    "id":"1"
+  }));
+}
+
 function listDir(directoryId, localPath, isChildDir) {
   api.files.list(directoryId, function gotPutIoListing(data) {
     if (data.files.length == 0) {
@@ -87,7 +115,10 @@ function listDir(directoryId, localPath, isChildDir) {
               }
 
               if (config.aria2c.rpcHost && config.aria2c.useRPC) {
-
+                console.log('adding ' + localFilePath + ' to the download queue...');
+                sendRPCRequest(config.aria2c.rpcHost, 'aria2.addUri',
+                                                      [ [ api.files.download(fileNode.id) ],
+                                                        { dir: fileDir } ]);
               } else {
                 var shellCommand = config.aria2c.path + ' -d "' + fileDir + '" "' + api.files.download(fileNode.id) + '"';
 
@@ -97,14 +128,15 @@ function listDir(directoryId, localPath, isChildDir) {
 
                 var afterStat = fs.statSync(finalPath);
                 deleteShowIfCompleted(api, fileNode, afterStat);
-              }
 
-              if (fileNode.size > 20 * 1024 * 1024) {
-                if (tvshow) {
-                  push.send('put.io sync', 'downloaded an episode of ' + tvshow.name);
-                } else {
-                  push.send('put.io sync', 'Downloaded ' + fileNode.name);
+                if (fileNode.size > 20 * 1024 * 1024) {
+                  if (tvshow) {
+                    push.send('put.io sync', 'downloaded an episode of ' + tvshow.name);
+                  } else {
+                    push.send('put.io sync', 'Downloaded ' + fileNode.name);
+                  }
                 }
+
               }
             });
           }

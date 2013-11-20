@@ -117,11 +117,11 @@ function listDir(directoryId, localPath, isChildDir) {
                 console.log('adding ' + localFilePath + ' to the download queue...');
                 sendRPCRequest('aria2.addUri', [ [ api.files.download(fileNode.id) ], { dir: fileDir } ]);
 
-//                if (tvshow) {
-//                  push.send('put.io sync', 'Began download of an episode of ' + tvshow.name);
-//                } else {
-//                  push.send('put.io sync', 'Began download of ' + fileNode.name);
-//                }
+                if (tvshow) {
+                  push.send('put.io sync', 'Began download of an episode of ' + tvshow.name);
+                } else {
+                  push.send('put.io sync', 'Began download of ' + fileNode.name);
+                }
 
               } else {
                 var shellCommand = config.aria2c.path + ' -d "' + fileDir + '" "' + api.files.download(fileNode.id) + '"';

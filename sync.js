@@ -4,8 +4,10 @@ var _ = require('underscore');
 var fs = require('fs');
 var execSync = require('execSync');
 var Pushover = require('node-pushover');
+var request = require('request');
 var TVShowMatcher = require('./tvshowdir');
 var config = require('./config');
+require('longjohn');
 
 var push = null;
 if (config.pushpin.enabled) {
@@ -59,6 +61,31 @@ function deleteShowIfCompleted(api, fileNode, stat) {
   return false;
 }
 
+function sendRPCRequest(methodName, params) {
+  if (!params) params = [];
+
+  request.post({
+      url: 'http://' + config.aria2c.rpcHost + '/jsonrpc',
+      json: {
+        "jsonrpc":"2.0",
+        "method":methodName,
+        "params": params,
+        "id":"1",
+        "timeout": 5000
+      }
+    }, function(error, response, body) {
+      if (error && error.code == 'ECONNREFUSED') {
+        console.error('connection refused to aria2c rpc at ' + config.aria2c.rpcHost);
+        console.error('could it be you forgot to start aria2c --enable-rpc ?');
+      }
+
+      if (body && body.error) {
+        console.error('aria2c response: ' + body.error.message);
+      }
+    }
+  );
+}
+
 function listDir(directoryId, localPath, isChildDir) {
   api.files.list(directoryId, function gotPutIoListing(data) {
     if (data.files.length == 0) {
@@ -86,21 +113,34 @@ function listDir(directoryId, localPath, isChildDir) {
                 return;
               }
 
-              var shellCommand = config.ariaPath + ' -d "' + fileDir + '" "' + api.files.download(fileNode.id) + '"';
+              if (config.aria2c.rpcHost && config.aria2c.useRPC) {
+                console.log('adding ' + localFilePath + ' to the download queue...');
+                sendRPCRequest('aria2.addUri', [ [ api.files.download(fileNode.id) ], { dir: fileDir } ]);
 
-              console.log('downloading ' + localFilePath + '...');
-              console.log(shellCommand);
-              var result = execSync.stdout(shellCommand);
-
-              var afterStat =fs.statSync(finalPath);
-              deleteShowIfCompleted(api, fileNode, afterStat);
-
-              if (fileNode.size > 20 * 1024 * 1024) {
                 if (tvshow) {
-                  push.send('put.io sync', 'downloaded an episode of ' + tvshow.name);
+                  push.send('put.io sync', 'Began download of an episode of ' + tvshow.name);
                 } else {
-                  push.send('put.io sync', 'Downloaded ' + fileNode.name);
+                  push.send('put.io sync', 'Began download of ' + fileNode.name);
                 }
+
+              } else {
+                var shellCommand = config.aria2c.path + ' -d "' + fileDir + '" "' + api.files.download(fileNode.id) + '"';
+
+                console.log('downloading ' + localFilePath + '...');
+                console.log(shellCommand);
+                var result = execSync.stdout(shellCommand);
+
+                var afterStat = fs.statSync(finalPath);
+                deleteShowIfCompleted(api, fileNode, afterStat);
+
+                if (fileNode.size > 20 * 1024 * 1024) {
+                  if (tvshow) {
+                    push.send('put.io sync', 'Downloaded an episode of ' + tvshow.name);
+                  } else {
+                    push.send('put.io sync', 'Downloaded ' + fileNode.name);
+                  }
+                }
+
               }
             });
           }

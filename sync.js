@@ -74,8 +74,6 @@ function sendRPCRequest(methodName, params) {
         "timeout": 5000
       }
     }, function(error, response, body) {
-      console.dir(error.code);
-
       if (error && error.code == 'ECONNREFUSED') {
         console.error('connection refused to aria2c rpc at ' + config.aria2c.rpcHost);
         console.error('could it be you forgot to start aria2c --enable-rpc ?');

@@ -23,6 +23,10 @@ After downloading an file the script can optionaly notify you via Pushpin.
 - `cp config.sample.js config.js`
 - you need to enter some API keys into the config.js file. look at the links inside this file
 
+aria2 can run in two modes: in command line mode or in rpc-server mode. rpc mode is now the default mode. You can turn it of be changing aria2c.useRPC to false in the config.
+
+To learn how to setup aria2 in RPC mode read more [here](http://www.albertdelafuente.com/doku.php/wiki/dev/raspi/aria2c-raspi).
+
 # Usage
 
 Syncing directories from put.io to a local directory call:

@@ -115,7 +115,7 @@ function listDir(directoryId, localPath, isChildDir) {
 
               if (config.aria2c.rpcHost && config.aria2c.useRPC) {
                 console.log('adding ' + localFilePath + ' to the download queue...');
-                sendRPCRequest('addUri', [ [ api.files.download(fileNode.id) ], { dir: fileDir } ]);
+                sendRPCRequest('aria2.addUri', [ [ api.files.download(fileNode.id) ], { dir: fileDir } ]);
 
 //                if (tvshow) {
 //                  push.send('put.io sync', 'Began download of an episode of ' + tvshow.name);

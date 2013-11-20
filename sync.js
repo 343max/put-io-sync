@@ -4,11 +4,10 @@ var _ = require('underscore');
 var fs = require('fs');
 var execSync = require('execSync');
 var Pushover = require('node-pushover');
-if (!XMLHttpRequest) {
-  var XMLHttpRequest = require('xmlhttprequest').XMLHttpRequest;
-}
+var request = require('request');
 var TVShowMatcher = require('./tvshowdir');
 var config = require('./config');
+require('longjohn');
 
 var push = null;
 if (config.pushpin.enabled) {
@@ -62,29 +61,31 @@ function deleteShowIfCompleted(api, fileNode, stat) {
   return false;
 }
 
-function sendRPCRequest(host, methodName, params) {
+function sendRPCRequest(methodName, params) {
   if (!params) params = [];
 
-  var req = new XMLHttpRequest();
-  req.open('POST', 'http://' + host + '/jsonrpc');
-  req.setRequestHeader("Content-Type","application/json");
-  req.onload = function(e) {
-    if (req.status != 200) {
-      console.dir(req);
-    } else {
-      var o = JSON.parse(req.responseText);
+  request.post({
+      url: 'http://' + config.aria2c.rpcHost + '/jsonrpc',
+      json: {
+        "jsonrpc":"2.0",
+        "method":methodName,
+        "params": params,
+        "id":"1",
+        "timeout": 5000
+      }
+    }, function(error, response, body) {
+      console.dir(error.code);
 
-      if (o.error) {
-        console.dir({method: methodName, params: params, error: o.error});
+      if (error && error.code == 'ECONNREFUSED') {
+        console.error('connection refused to aria2c rpc at ' + config.aria2c.rpcHost);
+        console.error('could it be you forgot to start aria2c --enable-rpc ?');
+      }
+
+      if (body && body.error) {
+        console.error('aria2c response: ' + body.error.message);
       }
     }
-  }
-  req.send(JSON.stringify({
-    "jsonrpc":"2.0",
-    "method":methodName,
-    "params": params,
-    "id":"1"
-  }));
+  );
 }
 
 function listDir(directoryId, localPath, isChildDir) {
@@ -116,9 +117,14 @@ function listDir(directoryId, localPath, isChildDir) {
 
               if (config.aria2c.rpcHost && config.aria2c.useRPC) {
                 console.log('adding ' + localFilePath + ' to the download queue...');
-                sendRPCRequest(config.aria2c.rpcHost, 'aria2.addUri',
-                                                      [ [ api.files.download(fileNode.id) ],
-                                                        { dir: fileDir } ]);
+                sendRPCRequest('addUri', [ [ api.files.download(fileNode.id) ], { dir: fileDir } ]);
+
+//                if (tvshow) {
+//                  push.send('put.io sync', 'Began download of an episode of ' + tvshow.name);
+//                } else {
+//                  push.send('put.io sync', 'Began download of ' + fileNode.name);
+//                }
+
               } else {
                 var shellCommand = config.aria2c.path + ' -d "' + fileDir + '" "' + api.files.download(fileNode.id) + '"';
 
@@ -131,7 +137,7 @@ function listDir(directoryId, localPath, isChildDir) {
 
                 if (fileNode.size > 20 * 1024 * 1024) {
                   if (tvshow) {
-                    push.send('put.io sync', 'downloaded an episode of ' + tvshow.name);
+                    push.send('put.io sync', 'Downloaded an episode of ' + tvshow.name);
                   } else {
                     push.send('put.io sync', 'Downloaded ' + fileNode.name);
                   }

@@ -4,7 +4,7 @@ module.exports = {
   },
   'aria2c': {
     'path': 'aria2c',
-    'rpcHost': 'localhost:6800',
+    'rpcHost': '127.0.0.1:6800', // you might run into problems if you use 'localhost' here
     'useRPC': true
   },
   'pushpin': {

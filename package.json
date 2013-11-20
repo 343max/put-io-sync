@@ -5,6 +5,8 @@
     "underscore": "*",
     "execSync": "*",
     "node-pushover": "*",
-    "xmlhttprequest": "*"
+    "xmlhttprequest": "*",
+    "request": "*",
+    "longjohn": "*"
   }
 }

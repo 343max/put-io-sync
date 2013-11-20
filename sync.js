@@ -86,14 +86,18 @@ function listDir(directoryId, localPath, isChildDir) {
                 return;
               }
 
-              var shellCommand = config.aria2c.path + ' -d "' + fileDir + '" "' + api.files.download(fileNode.id) + '"';
+              if (config.aria2c.rpcHost && config.aria2c.useRPC) {
 
-              console.log('downloading ' + localFilePath + '...');
-              console.log(shellCommand);
-              var result = execSync.stdout(shellCommand);
+              } else {
+                var shellCommand = config.aria2c.path + ' -d "' + fileDir + '" "' + api.files.download(fileNode.id) + '"';
 
-              var afterStat =fs.statSync(finalPath);
-              deleteShowIfCompleted(api, fileNode, afterStat);
+                console.log('downloading ' + localFilePath + '...');
+                console.log(shellCommand);
+                var result = execSync.stdout(shellCommand);
+
+                var afterStat = fs.statSync(finalPath);
+                deleteShowIfCompleted(api, fileNode, afterStat);
+              }
 
               if (fileNode.size > 20 * 1024 * 1024) {
                 if (tvshow) {

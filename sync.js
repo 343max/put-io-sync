@@ -107,6 +107,7 @@ function listDir(directoryId, localPath, isChildDir) {
             if (tvshow) fileDir = tvshow.path;
 
             var finalPath = fileDir + '/' + fileNode.name;
+            var downloadURL = (config.putIo.downloadHost || 'https://put.io/') + 'v2/files/' + fileNode.id + '/download?oauth_token=' + config.putIo.oauth2key;
 
             fs.stat(finalPath, function gotFileStat(err, stat) {
               if (deleteShowIfCompleted(api, fileNode, stat)) {
@@ -115,7 +116,7 @@ function listDir(directoryId, localPath, isChildDir) {
 
               if (config.aria2c.rpcHost && config.aria2c.useRPC) {
                 console.log('adding ' + localFilePath + ' to the download queue...');
-                sendRPCRequest('aria2.addUri', [ [ api.files.download(fileNode.id) ], { dir: fileDir } ]);
+                sendRPCRequest('aria2.addUri', [ [ downloadURL ], { dir: fileDir } ]);
 
                 if (tvshow) {
                   push.send('put.io sync', 'Began download of an episode of ' + tvshow.name);
@@ -124,7 +125,7 @@ function listDir(directoryId, localPath, isChildDir) {
                 }
 
               } else {
-                var shellCommand = config.aria2c.path + ' -d "' + fileDir + '" "' + api.files.download(fileNode.id) + '"';
+                var shellCommand = config.aria2c.path + ' -d "' + fileDir + '" "' + downloadURL + '"';
 
                 console.log('downloading ' + localFilePath + '...');
                 console.log(shellCommand);

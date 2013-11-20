@@ -86,7 +86,7 @@ function listDir(directoryId, localPath, isChildDir) {
                 return;
               }
 
-              var shellCommand = config.ariaPath + ' -d "' + fileDir + '" "' + api.files.download(fileNode.id) + '"';
+              var shellCommand = config.aria2c.path + ' -d "' + fileDir + '" "' + api.files.download(fileNode.id) + '"';
 
               console.log('downloading ' + localFilePath + '...');
               console.log(shellCommand);

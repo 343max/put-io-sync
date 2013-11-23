@@ -50,15 +50,31 @@ if (tvShowDir) {
   matcher = function() {};
 }
 
-function deleteShowIfCompleted(api, fileNode, stat) {
-  if (stat && stat.size == fileNode.size) {
-    // this file was allready downloaded - so we might delete it
-    console.log('deleting ' + fileNode.name + ' from put.io');
-    api.files.delete(fileNode.id);
-    return true;
-  };
+function checkLocalFile(localFilename, callback) {
+  fs.stat(localFilename, function(err, stat) {
+    fs.stat(localFilename + '.aria2', function(ariaErr, ariaStat) {
+      var downloadIsInProgress = (ariaStat != null);
+      var downloadIsCompleted = (!downloadIsInProgress && (stat != null));
 
-  return false;
+      callback(downloadIsInProgress, downloadIsCompleted);
+    });
+  });
+}
+
+function deleteShowIfCompleted(api, fileNode, stat, localFilename, callback) {
+  fs.stat(localFilename + '.aria2', function(err, aria2fileStat) {
+    if (!err) {
+      // an .aria2 file exists: we can't delete this yet
+      callback(false);
+    } else if (stat && stat.size == fileNode.size) {
+      // this file was allready downloaded - so we might delete it
+      console.log('deleting ' + fileNode.name + ' from put.io');
+      api.files.delete(fileNode.id);
+      callback(true);
+    } else {
+      callback(false);
+    };
+  });
 }
 
 function sendRPCRequest(methodName, params) {
@@ -107,41 +123,44 @@ function listDir(directoryId, localPath, isChildDir) {
             if (tvshow) fileDir = tvshow.path;
 
             var finalPath = fileDir + '/' + fileNode.name;
-            var downloadURL = (config.putIo.downloadHost || 'https://put.io/') + 'v2/files/' + fileNode.id + '/download?oauth_token=' + config.putIo.oauth2key;
+            var downloadURL = api.files.download(fileNode.id);
 
-            fs.stat(finalPath, function gotFileStat(err, stat) {
-              if (deleteShowIfCompleted(api, fileNode, stat)) {
-                return;
-              }
-
-              if (config.aria2c.rpcHost && config.aria2c.useRPC) {
-                console.log('adding ' + localFilePath + ' to the download queue...');
-                sendRPCRequest('aria2.addUri', [ [ downloadURL ], { dir: fileDir } ]);
-
-                if (tvshow) {
-                  push.send('put.io sync', 'Began download of an episode of ' + tvshow.name);
-                } else {
-                  push.send('put.io sync', 'Began download of ' + fileNode.name);
-                }
-
+            checkLocalFile(finalPath, function(downloadIsInProgress, downloadIsCompleted) {
+              if (downloadIsCompleted) {
+                console.log('should delete ' + JSON.stringify(fileNode.name));
+//                api.files.delete(fileNode.id);
+              } else if (downloadIsInProgress) {
+                console.log('download in progress: ' + fileNode.name);
               } else {
-                var shellCommand = config.aria2c.path + ' -d "' + fileDir + '" "' + downloadURL + '"';
+                if (config.aria2c.rpcHost && config.aria2c.useRPC) {
+                  console.log('adding ' + localFilePath + ' to the download queue...');
+                  sendRPCRequest('aria2.addUri', [ [ downloadURL ], { dir: fileDir } ]);
 
-                console.log('downloading ' + localFilePath + '...');
-                console.log(shellCommand);
-                var result = execSync.stdout(shellCommand);
-
-                var afterStat = fs.statSync(finalPath);
-                deleteShowIfCompleted(api, fileNode, afterStat);
-
-                if (fileNode.size > 20 * 1024 * 1024) {
                   if (tvshow) {
-                    push.send('put.io sync', 'Downloaded an episode of ' + tvshow.name);
+                    push.send('put.io sync', 'Began download of an episode of ' + tvshow.name);
                   } else {
-                    push.send('put.io sync', 'Downloaded ' + fileNode.name);
+                    push.send('put.io sync', 'Began download of ' + fileNode.name);
+                  }
+
+                } else {
+//                  var shellCommand = config.aria2c.path + ' -d "' + fileDir + '" "' + downloadURL + '"';
+
+                  console.log('downloading ' + localFilePath + '...');
+                  console.log(shellCommand);
+                  var result = execSync.stdout(shellCommand);
+
+                  fs.stat(finalPath, function gotFinalStat(err, afterStat) {
+                    deleteShowIfCompleted(api, fileNode, afterStat, finalPath);
+                  });
+
+                  if (fileNode.size > 20 * 1024 * 1024) {
+                    if (tvshow) {
+                      push.send('put.io sync', 'Downloaded an episode of ' + tvshow.name);
+                    } else {
+                      push.send('put.io sync', 'Downloaded ' + fileNode.name);
+                    }
                   }
                 }
-
               }
             });
           }
@@ -163,6 +182,5 @@ if (fs.existsSync(lockFile)) {
     fs.closeSync(fd);
   });
   listDir(directoryId, localPath, false);
-
 }
 

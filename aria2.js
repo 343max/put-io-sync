@@ -16,7 +16,7 @@ module.exports = function Aria2(command, args) {
     return ((gidIndex++) + pad).substr(0, pad.length);
   }
 
-  this.addUri = function addDownload(urls, localpath, options) {
+  this.addUri = function addDownload(urls, localpath, options, associatedObject) {
     var gid = this.gid();
     if (!options) options = {};
     options.gid = gid;
@@ -33,7 +33,8 @@ module.exports = function Aria2(command, args) {
     downloadQueue.push({
       urls: urls,
       localpath: localpath,
-      options: options
+      options: options,
+      associatedObject: associatedObject
     });
 
     return gid;
@@ -76,15 +77,26 @@ module.exports = function Aria2(command, args) {
     return result;
   };
 
-  this.exec = function(exec) {
+  this.exec = function(callback) {
     var out = '';
     var ariaProcess = spawn(command, args);
     ariaProcess.stdout.on('data', function(data) {
       out += data.toString();
     });
     ariaProcess.on('close', function(code) {
-      console.log(out);
-      console.log('process existed with: ' + code);
+      var downloadStatus = self.parseOut(out);
+      var complete = [];
+      var incomplete = [];
+      _.each(downloadStatus, function(status, gid) {
+        if (status) {
+          complete.push(self.downloadForGID(gid));
+        } else {
+          incomplete.push(self.downloadForGID(gid));
+        }
+      });
+
+      if (callback)
+        callback(complete, incomplete);
     });
     ariaProcess.stdin.end(this.inputFile());
     return ariaProcess;

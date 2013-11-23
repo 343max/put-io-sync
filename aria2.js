@@ -58,10 +58,20 @@ module.exports = function Aria2(command, args) {
     return result;
   };
 
+  this.downloadForGID = function downloadForGID(shortGID) {
+    return _.find(downloadQueue, function(download) {
+      return download.options.gid.substr(0, shortGID.length) == shortGID;
+    });
+  }
+
+  this.gidForShortGID = function gidForShortGID(shortGID) {
+    return this.downloadForGID(shortGID).options.gid;
+  }
+
   this.parseOut = function parseOut(out) {
     var result = {};
     out.replace(/(^|\n)([0-9]{6})\|([^\s\|]+)/mg, function(m1, m2, gid, status) {
-      result[gid] = (status == 'OK');
+      result[self.gidForShortGID(gid)] = (status == 'OK');
     });
     return result;
   };

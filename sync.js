@@ -110,7 +110,7 @@ function listDir(directoryId, localPath, isChildDir) {
         api.files.delete(directoryId);
       }
     } else {
-      fs.mkdir(localPath, 0766, function dirCreated() {
+      fs.mkdir(localPath, 0755, function dirCreated() {
         _.each(data.files, function eachFile(fileNode) {
           var localFilePath = localPath + '/' + fileNode.name;
 

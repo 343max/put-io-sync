@@ -4,7 +4,7 @@ var spawn = require('child_process').spawn;
 module.exports = function Aria2(command, args) {
   var self = this;
   var downloadQueue = [];
-  var gidIndex = 0;
+  var gidIndex = 1;
 
   if (!args)
     args = [];
@@ -12,8 +12,8 @@ module.exports = function Aria2(command, args) {
   args.push('-i -');
 
   this.gid = function() {
-    var pad = '0000000042000000';
-    return (pad + (gidIndex++)).slice(-pad.length);
+    var pad = '0000000000000000';
+    return ((gidIndex++) + pad).substr(0, pad.length);
   }
 
   this.addUri = function addDownload(urls, localpath, options) {

@@ -1,12 +1,18 @@
 var _ = require('underscore');
+var spawn = require('child_process').spawn;
 
-module.exports = function Aria2(binPath) {
+module.exports = function Aria2(command, args) {
   var self = this;
   var downloadQueue = [];
   var gidIndex = 0;
 
+  if (!args)
+    args = [];
+
+  args.push('-i -');
+
   this.gid = function() {
-    var pad = '00000000420000000';
+    var pad = '0000000042000000';
     return (pad + (gidIndex++)).slice(-pad.length);
   }
 
@@ -17,7 +23,7 @@ module.exports = function Aria2(binPath) {
 
     if (localpath) {
       var pathElements = localpath.split('/');
-      options.name = pathElements.pop();
+      options.out = pathElements.pop();
       options.dir = pathElements.join('/');
     }
 
@@ -50,5 +56,20 @@ module.exports = function Aria2(binPath) {
     });
 
     return result;
+  }
+
+  this.exec = function(exec) {
+    var ariaProcess = spawn(command, args);
+    ariaProcess.stdout.on('data', function(data) {
+      console.log(data.toString());
+    });
+    ariaProcess.on('error', function(err) {
+      console.dir(err);
+    });
+    ariaProcess.on('close', function(code) {
+      console.log('process existed with: ' + code);
+    });
+    ariaProcess.stdin.end(this.inputFile());
+    return ariaProcess;
   }
 }

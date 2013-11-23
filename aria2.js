@@ -56,17 +56,24 @@ module.exports = function Aria2(command, args) {
     });
 
     return result;
-  }
+  };
+
+  this.parseOut = function parseOut(out) {
+    var result = {};
+    out.replace(/(^|\n)([0-9]{6})\|([^\s\|]+)/mg, function(m1, m2, gid, status) {
+      result[gid] = (status == 'OK');
+    });
+    return result;
+  };
 
   this.exec = function(exec) {
+    var out = '';
     var ariaProcess = spawn(command, args);
     ariaProcess.stdout.on('data', function(data) {
-      console.log(data.toString());
-    });
-    ariaProcess.on('error', function(err) {
-      console.dir(err);
+      out += data.toString();
     });
     ariaProcess.on('close', function(code) {
+      console.log(out);
       console.log('process existed with: ' + code);
     });
     ariaProcess.stdin.end(this.inputFile());

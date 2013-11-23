@@ -104,7 +104,40 @@ function sendRPCRequest(methodName, params) {
   );
 }
 
+function WaitFor() {
+  var self = this;
+  var counters = {}
+  this.whenComplete = function() { console.log('complete'); };
+
+  var count = function(label, i) {
+    var c = counters[label] || 0;
+    c += i;
+    if (c < 0)
+      throw ('count below 0 for label ' + label);
+    counters[label] = c;
+
+    var sum = _.reduce(counters, function(memo, value) {
+      return memo + value;
+    }, 0);
+
+    if (sum == 0) {
+      self.whenComplete();
+    }
+  }
+
+  this.up = function(label) {
+    count(label, 1);
+  };
+
+  this.down = function(label) {
+    count(label, -1);
+  }
+}
+
+var waiting = new WaitFor();
+
 function listDir(directoryId, localPath, isChildDir) {
+  waiting.up('listDir');
   api.files.list(directoryId, function gotPutIoListing(data) {
     if (data.files.length == 0) {
       if (isChildDir) {
@@ -112,12 +145,15 @@ function listDir(directoryId, localPath, isChildDir) {
         api.files.delete(directoryId);
       }
     } else {
+      waiting.up('mkdir');
       fs.mkdir(localPath, 0755, function dirCreated() {
         _.each(data.files, function eachFile(fileNode) {
+          waiting.up('eachFile');
           var localFilePath = localPath + '/' + fileNode.name;
 
           if (fileNode.content_type == 'application/x-directory') {
             listDir(fileNode.id, localFilePath, true);
+            waiting.down('eachFile');
           } else {
             var fileDir = localPath;
             var tvshow = matcher(fileNode.name);
@@ -148,11 +184,14 @@ function listDir(directoryId, localPath, isChildDir) {
 //                  }
 //                }
               }
+              waiting.down('eachFile');
             });
           }
         });
+        waiting.down('mkdir');
       });
     }
+    waiting.down('listDir');
   });
 }
 
@@ -168,5 +207,10 @@ if (fs.existsSync(lockFile)) {
     fs.closeSync(fd);
   });
   listDir(directoryId, localPath, false);
+
+  waiting.whenComplete = function() {
+    console.log('done!');
+    console.log(aria.inputFile());
+  };
 }
 

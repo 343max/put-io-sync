@@ -4,9 +4,8 @@ module.exports = {
     'downloadHost': 'https://put.io/'
   },
   'aria2c': {
-    'path': 'aria2c',
-    'rpcHost': '127.0.0.1:6800', // you might run into problems if you use 'localhost' here
-    'useRPC': true
+    'bin': 'aria2c',
+    'args': []
   },
   'pushpin': {
     'enabled': false,

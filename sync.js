@@ -6,6 +6,7 @@ var execSync = require('execSync');
 var Pushover = require('node-pushover');
 var request = require('request');
 var TVShowMatcher = require('./tvshowdir');
+var Aria2 = require('./aria2');
 var config = require('./config');
 require('longjohn');
 
@@ -22,6 +23,7 @@ if (config.pushpin.enabled) {
 }
 
 var api = new PutIO(config.putIo.oauth2key);
+var aria = new Aria2(config.aria2c.bin, config.aria2c.args);
 
 var args = argv.option([{
   name: 'directory-id',
@@ -132,35 +134,19 @@ function listDir(directoryId, localPath, isChildDir) {
               } else if (downloadIsInProgress) {
                 console.log('download in progress: ' + fileNode.name);
               } else {
-                if (config.aria2c.rpcHost && config.aria2c.useRPC) {
-                  console.log('adding ' + localFilePath + ' to the download queue...');
-                  sendRPCRequest('aria2.addUri', [ [ downloadURL ], { dir: fileDir } ]);
 
-                  if (tvshow) {
-                    push.send('put.io sync', 'Began download of an episode of ' + tvshow.name);
-                  } else {
-                    push.send('put.io sync', 'Began download of ' + fileNode.name);
-                  }
+//                var shellCommand = config.aria2c.path + ' -d "' + fileDir + '" "' + downloadURL + '"';
 
-                } else {
-//                  var shellCommand = config.aria2c.path + ' -d "' + fileDir + '" "' + downloadURL + '"';
+                aria.addUri(downloadURL, finalPath, null, fileNode);
 
-                  console.log('downloading ' + localFilePath + '...');
-                  console.log(shellCommand);
-                  var result = execSync.stdout(shellCommand);
-
-                  fs.stat(finalPath, function gotFinalStat(err, afterStat) {
-                    deleteShowIfCompleted(api, fileNode, afterStat, finalPath);
-                  });
-
-                  if (fileNode.size > 20 * 1024 * 1024) {
-                    if (tvshow) {
-                      push.send('put.io sync', 'Downloaded an episode of ' + tvshow.name);
-                    } else {
-                      push.send('put.io sync', 'Downloaded ' + fileNode.name);
-                    }
-                  }
-                }
+                console.log('downloading ' + localFilePath + '...');
+//                if (fileNode.size > 20 * 1024 * 1024) {
+//                  if (tvshow) {
+//                    push.send('put.io sync', 'Downloaded an episode of ' + tvshow.name);
+//                  } else {
+//                    push.send('put.io sync', 'Downloaded ' + fileNode.name);
+//                  }
+//                }
               }
             });
           }

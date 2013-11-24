@@ -62,22 +62,6 @@ function checkLocalFile(localFilename, callback) {
   });
 }
 
-function deleteShowIfCompleted(api, fileNode, stat, localFilename, callback) {
-  fs.stat(localFilename + '.aria2', function(err, aria2fileStat) {
-    if (!err) {
-      // an .aria2 file exists: we can't delete this yet
-      callback(false);
-    } else if (stat && stat.size == fileNode.size) {
-      // this file was allready downloaded - so we might delete it
-      console.log('deleting ' + fileNode.name + ' from put.io');
-      api.files.delete(fileNode.id);
-      callback(true);
-    } else {
-      callback(false);
-    };
-  });
-}
-
 function sendRPCRequest(methodName, params) {
   if (!params) params = [];
 
@@ -165,7 +149,7 @@ function listDir(directoryId, localPath, isChildDir) {
             checkLocalFile(finalPath, function(downloadIsInProgress, downloadIsCompleted) {
               if (downloadIsCompleted) {
                 console.log('should delete ' + JSON.stringify(fileNode.name));
-                api.files.delete(fileNode.id);
+                // api.files.delete(fileNode.id);
               } else if (downloadIsInProgress) {
                 console.log('download in progress: ' + fileNode.name);
               } else {
@@ -211,7 +195,7 @@ if (fs.existsSync(lockFile)) {
         }
 
         console.log('deleting file ' + fileNode.id + ' (' + fileNode.name + ')');
-        api.files.delete(fileNode.id);
+        // api.files.delete(fileNode.id);
       });
 
       if (pushoverMessages.length > 0) {

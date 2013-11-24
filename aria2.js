@@ -89,7 +89,6 @@ module.exports = function Aria2(command, args) {
         out += data.toString();
       });
       ariaProcess.on('close', function(code) {
-        console.log(out);
         var downloadStatus = self.parseOut(out);
         var complete = [];
         var incomplete = [];

@@ -195,7 +195,7 @@ if (fs.existsSync(lockFile)) {
         }
 
         console.log('deleting file ' + fileNode.id + ' (' + fileNode.name + ')');
-        // api.files.delete(fileNode.id);
+        api.files.delete(fileNode.id);
       });
 
       if (pushoverMessages.length > 0) {

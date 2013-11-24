@@ -169,19 +169,9 @@ function listDir(directoryId, localPath, isChildDir) {
               } else if (downloadIsInProgress) {
                 console.log('download in progress: ' + fileNode.name);
               } else {
-
-//                var shellCommand = config.aria2c.path + ' -d "' + fileDir + '" "' + downloadURL + '"';
-
-                aria.addUri(downloadURL, finalPath, null, fileNode);
+                aria.addUri(downloadURL, finalPath, null, { fileNode: fileNode, tvshow: tvshow } );
 
                 console.log('downloading ' + localFilePath + '...');
-//                if (fileNode.size > 20 * 1024 * 1024) {
-//                  if (tvshow) {
-//                    push.send('put.io sync', 'Downloaded an episode of ' + tvshow.name);
-//                  } else {
-//                    push.send('put.io sync', 'Downloaded ' + fileNode.name);
-//                  }
-//                }
               }
               waiting.down('eachFile');
             });
@@ -208,13 +198,25 @@ if (fs.existsSync(lockFile)) {
   listDir(directoryId, localPath, false);
 
   waiting.whenComplete = function() {
-    console.log('done!');
-    console.log(aria.inputFile());
     aria.exec(function(complete, incomplete) {
+      var pushoverMessages = [];
+
       _.each(complete, function(download) {
-        var fileNode = download.associatedObject;
+        var fileNode = download.associatedObject.fileNode;
+        var tvshow = download.associatedObject.tvshow;
+        if (tvshow) {
+          pushoverMessages.push('episode of ' + tvshow.name);
+        } else {
+          pushoverMessages.push(fileNode.name);
+        }
+
         console.log('deleting file ' + fileNode.id + ' (' + fileNode.name + ')');
+//        api.files.delete(fileNode.id);
       });
+
+      if (pushoverMessages.length > 0) {
+        push.send('put.io sync', 'Downloaded: \n' + pushoverMessages.join(", "));
+      }
     });
   };
 }

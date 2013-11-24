@@ -1,5 +1,6 @@
 var _ = require('underscore');
 var spawn = require('child_process').spawn;
+var fs = require('fs');
 
 module.exports = function Aria2(command, args) {
   var self = this;
@@ -8,8 +9,6 @@ module.exports = function Aria2(command, args) {
 
   if (!args)
     args = [];
-
-  args.push('-i -');
 
   this.gid = function() {
     var pad = '0000000000000000';
@@ -78,27 +77,34 @@ module.exports = function Aria2(command, args) {
   };
 
   this.exec = function(callback) {
-    var out = '';
-    var ariaProcess = spawn(command, args);
-    ariaProcess.stdout.on('data', function(data) {
-      out += data.toString();
-    });
-    ariaProcess.on('close', function(code) {
-      var downloadStatus = self.parseOut(out);
-      var complete = [];
-      var incomplete = [];
-      _.each(downloadStatus, function(status, gid) {
-        if (status) {
-          complete.push(self.downloadForGID(gid));
-        } else {
-          incomplete.push(self.downloadForGID(gid));
-        }
+    var infilepath = '/tmp/urls';
+    fs.writeFile(infilepath, this.inputFile(), function (err) {
+      if (err) {
+        return console.log(err);
+      }
+      var out = '';
+      args.push('-i ' + infilepath);
+      var ariaProcess = spawn(command, args);
+      ariaProcess.stdout.on('data', function(data) {
+        out += data.toString();
       });
+      ariaProcess.on('close', function(code) {
+        console.log(out);
+        var downloadStatus = self.parseOut(out);
+        var complete = [];
+        var incomplete = [];
+        _.each(downloadStatus, function(status, gid) {
+          if (status) {
+            complete.push(self.downloadForGID(gid));
+          } else {
+            incomplete.push(self.downloadForGID(gid));
+          }
+        });
 
-      if (callback)
-        callback(complete, incomplete);
+        if (callback)
+          callback(complete, incomplete);
+      });
+      ariaProcess.stdin.end();
     });
-    ariaProcess.stdin.end(this.inputFile());
-    return ariaProcess;
   }
 }

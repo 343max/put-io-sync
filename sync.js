@@ -2,7 +2,6 @@ var PutIO = require('put.io-v2');
 var argv = require( 'argv' );
 var _ = require('underscore');
 var fs = require('fs');
-var execSync = require('execSync');
 var Pushover = require('node-pushover');
 var request = require('request');
 var TVShowMatcher = require('./tvshowdir');

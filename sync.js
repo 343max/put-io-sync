@@ -211,6 +211,12 @@ if (fs.existsSync(lockFile)) {
   waiting.whenComplete = function() {
     console.log('done!');
     console.log(aria.inputFile());
+    aria.exec(function(complete, incomplete) {
+      _.each(complete, function(download) {
+        var fileNode = download.associatedObject;
+        console.log('deleting file ' + fileNode.id + ' (' + fileNode.name + ')');
+      });
+    });
   };
 }
 

@@ -149,7 +149,7 @@ function listDir(directoryId, localPath, isChildDir) {
             checkLocalFile(finalPath, function(downloadIsInProgress, downloadIsCompleted) {
               if (downloadIsCompleted) {
                 console.log('should delete ' + JSON.stringify(fileNode.name));
-                // api.files.delete(fileNode.id);
+                api.files.delete(fileNode.id);
               } else if (downloadIsInProgress) {
                 console.log('download in progress: ' + fileNode.name);
               } else {

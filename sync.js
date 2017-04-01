@@ -114,7 +114,7 @@ function listDir(directoryId, localPath, isChildDir) {
         var files = [];
         _.each(data.files, function eachFile(fileNode) {
           if (fileNode.content_type == 'application/x-directory') {
-            listDir(fileNode.id, localFilePath, true);
+            listDir(fileNode.id, localPath, true);
           } else {
             files.push(fileNode);
           }
